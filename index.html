@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parlay Tracker · ESPN live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* VOICE: sportsbook ticket, quick to scan mid-game
+   IDEA: the bet slip itself, each leg wired to its game
+   PICTURE: big scoreboard numerals + a progress meter per leg
+   COLOUR and TYPE: night ink, book green for hits, amber pending, purple boost; Barlow Condensed numerals, Inter text
+   LAYOUT: summary strip, then three slips stacked; one column on phone, two-up on wide */
+:root{color-scheme:light dark;
+--bg:light-dark(#eef1ee,#0c100e);--card:light-dark(#fff,#161b18);--card2:light-dark(#f4f6f4,#1e2420);
+--ink:light-dark(#121614,#eef2ef);--mute:light-dark(#5d6660,#98a29b);--line:light-dark(#dde2de,#2a312c);
+--win:light-dark(#178a3c,#4fdc78);--amb:light-dark(#a87400,#f2c230);--loss:light-dark(#c4302b,#ff6b5e);--boost:#6a2cff}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:1240px;margin:0 auto;padding:clamp(16px,3vw,36px) max(4vw,14px) 48px}
+h1{font:700 clamp(32px,6vw,48px)/1.05 "Barlow Condensed",sans-serif;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 18px;font-size:14px}
+.num{font-family:"Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-radius:14px;overflow:hidden;margin-bottom:22px}
+.sum div{background:var(--card);padding:12px 14px}
+.sum b{display:block;font:600 30px/1 "Barlow Condensed",sans-serif}
+.sum span{color:var(--mute);font-size:13px}
+.slips{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px;align-items:start}
+.slip{background:var(--card);border-radius:18px;padding:16px 16px 6px;border:1px solid var(--line)}
+.sh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
+.sh h2{font:700 24px/1.1 "Barlow Condensed",sans-serif;margin:0}
+.odds{font:700 20px/1 "Barlow Condensed",sans-serif;background:var(--boost);color:#fff;padding:3px 8px;border-radius:7px}
+.odds s{opacity:.6;font-weight:500;margin-right:6px}
+.pill{font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.p-pre{color:var(--amb);background:color-mix(in srgb,var(--amb) 15%,transparent)}
+.p-win{color:var(--win);background:color-mix(in srgb,var(--win) 15%,transparent)}
+.p-loss{color:var(--loss);background:color-mix(in srgb,var(--loss) 15%,transparent)}
+.money{display:flex;gap:16px;margin:8px 0 4px;color:var(--mute);font-size:14px;flex-wrap:wrap}
+.money b{color:var(--ink);font:600 20px/1 "Barlow Condensed",sans-serif;margin-left:4px}
+.note{font-size:13px;color:var(--mute);margin:2px 0 6px}
+.leg{border-top:1px solid var(--line);padding:14px 0}
+.lt{display:flex;gap:10px;align-items:flex-start}
+.dot{flex:none;width:22px;height:22px;border-radius:50%;border:2.5px solid var(--amb);margin-top:2px;display:grid;place-items:center;font-size:12px;font-weight:700}
+.dot.win{border-color:var(--win);background:var(--win);color:var(--card)}
+.dot.loss{border-color:var(--loss);background:var(--loss);color:var(--card)}
+.ln{flex:1}
+.ln strong{display:block;font-size:16px;line-height:1.25}
+.ln small{color:var(--mute);font-size:13px}
+.lodds{color:var(--mute);font:600 16px "Barlow Condensed",sans-serif}
+.verdict{font-weight:600;font-size:14px;margin-top:6px}
+.v-win{color:var(--win)}.v-loss{color:var(--loss)}.v-amb{color:var(--amb)}.v-mute{color:var(--mute)}
+.bar{height:8px;border-radius:99px;background:var(--card2);margin:8px 0 2px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--amb);transition:width .5s}
+.bar i.win{background:var(--win)}.bar i.loss{background:var(--loss)}
+.game{background:var(--card2);border-radius:12px;padding:10px 12px;margin-top:10px}
+.sb{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px}
+.tm{display:flex;align-items:baseline;gap:8px}.tm.h{justify-content:flex-end}
+.tm em{font-style:normal;font-weight:600}
+.tm .num{font-size:30px;font-weight:700;line-height:1}
+.clk{text-align:center;font-size:13px;color:var(--mute);white-space:nowrap}
+.clk.live{color:var(--loss);font-weight:600}
+.ctx{font-size:13px;color:var(--mute);margin-top:6px}
+.ctx b{color:var(--ink);font-weight:600}
+.feed{margin:8px 0 0;padding:0;list-style:none;font-size:13px}
+.feed li{padding:3px 0;border-top:1px dashed var(--line)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+button,.lnk{font:600 14px Inter,sans-serif;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+button:focus-visible,.lnk:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--boost);outline-offset:2px}
+.ed{display:none;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:8px}
+.ed.on{display:grid}
+.ed label{font-size:12px;color:var(--mute);display:grid;gap:2px}
+.ed input,.ed select{font:16px Inter,sans-serif;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 8px;width:100%}
+.foot{color:var(--mute);font-size:13px;margin-top:26px}
+@media(max-width:600px){.sum{grid-template-columns:repeat(2,minmax(0,1fr))}.tm .num{font-size:26px}}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.top h1{margin:0}
+#refresh{background:var(--boost);color:#fff;border:0;min-height:44px;padding:0 18px;font-size:15px}
+#refresh[disabled]{opacity:.6}
+.err{color:var(--loss);font-size:14px;margin:0 0 12px}
+.sit{font-size:13px;font-weight:600;color:var(--amb);margin-top:6px}
+.pl{font-size:13px;color:var(--mute);margin-top:4px}
+.pl b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>Friday's three parlays</h1><button id="refresh" type="button">Refresh now</button></div>
+  <p class="sub" id="asof">Loading ESPN…</p>
+  <p class="err" id="err" hidden></p>
+  <div class="sum" id="sum"></div>
+  <div class="slips" id="slips"></div>
+  <p class="foot">Live data from ESPN's public scoreboard and box-score feeds, pulled every 30 seconds and whenever you tap Refresh. Prop pace is a straight-line projection from minutes elapsed.</p>
+</div>
+<script>
+{
+const API = "https://site.api.espn.com/apis/site/v2/sports/";
+const DATE = "20261120";
+const LEAGUES = {
+  nba:    {path:"basketball/nba", q:"", per:4, len:12, pname:"Q", espn:"https://www.espn.com/nba/game/_/gameId/"},
+  ncaamb: {path:"basketball/mens-college-basketball", q:"&groups=50&limit=400", per:2, len:20, pname:"H", espn:"https://www.espn.com/mens-college-basketball/game/_/gameId/"},
+  ncaafb: {path:"football/college-football", q:"&groups=80&limit=300", per:4, len:15, pname:"Q", espn:"https://www.espn.com/college-football/game/_/gameId/"}
+};
+// Teams matched by ESPN location / nickname / abbreviation (any one)
+const GAMES = {
+  oak_pur:  {lg:"ncaamb", a:["Oakland","OAK"], h:["Purdue","PUR"], start:"2026-11-21T00:00:00Z"},
+  ucf_van:  {lg:"ncaamb", a:["UCF"], h:["Vanderbilt","VAN"], start:"2026-11-21T01:00:00Z"},
+  uk_ind:   {lg:"ncaamb", a:["Kentucky","UK"], h:["Indiana","IU"], start:"2026-11-21T01:00:00Z"},
+  orl_bkn:  {lg:"nba", a:["Magic","ORL"], h:["Nets","BKN"], start:"2026-11-21T00:30:00Z"},
+  was_chi:  {lg:"nba", a:["Wizards","WSH"], h:["Bulls","CHI"], start:"2026-11-21T01:00:00Z"},
+  sac_lal:  {lg:"nba", a:["Kings","SAC"], h:["Lakers","LAL"], start:"2026-11-21T03:00:00Z"},
+  clem_duke:{lg:"ncaafb", a:["Clemson","CLEM"], h:["Duke","DUKE"], start:"2026-11-21T00:30:00Z"},
+  ore_msu:  {lg:"ncaafb", a:["Oregon","ORE"], h:["Michigan State","MSU"], start:"2026-11-21T01:00:00Z"},
+  unm_wyo:  {lg:"ncaafb", a:["New Mexico","UNM"], h:["Wyoming","WYO"], start:"2026-11-21T02:00:00Z"}
+};
+const PROPS = {trae_ast:{g:"was_chi", who:"Trae Young", k:"AST"}, wagner_pts:{g:"orl_bkn", who:"Moritz Wagner", k:"PTS"}, sabonis_reb:{g:"sac_lal", who:"Domantas Sabonis", k:"REB"}};
+
+const SLIPS = [
+  {title:"NBA props", was:"+423", odds:"+636", boost:"+50% boost", wager:10, pays:73.60, legs:[
+    {type:"over", g:"was_chi", stat:"trae_ast", line:10, name:"Trae Young 10+ assists", odds:"−155", ctx:"Season: <b>8.8 APG</b> · November: 7.6"},
+    {type:"over", g:"orl_bkn", stat:"wagner_pts", line:8, name:"Moritz Wagner 8+ points", odds:"−129", ctx:"Season: <b>~10.9 PPG</b> in ~18 min off Brooklyn's bench"},
+    {type:"over", g:"sac_lal", stat:"sabonis_reb", line:12, name:"Domantas Sabonis 12+ rebounds", odds:"−126", ctx:"Season: <b>13.3 RPG</b> · November: 9.5 (4 games)"}]},
+  {title:"College hoops", was:"+332", odds:"+433", boost:"+30% boost", wager:20, pays:106.60, legs:[
+    {type:"spread", g:"oak_pur", side:"away", pts:23.5, name:"Oakland +23.5", odds:"−162", ctx:"Alt spread · at Purdue"},
+    {type:"spread", g:"ucf_van", side:"away", pts:18.5, name:"UCF +18.5", odds:"−153", ctx:"Alt spread · at Vanderbilt"},
+    {type:"ml", g:"uk_ind", side:"home", name:"Indiana moneyline", odds:"−162", ctx:"vs Kentucky in Indianapolis"}]},
+  {title:"CFB unders", was:"+487", odds:"+635", boost:"+30% boost (first $10)", wager:10, pays:73.50, slipOnly:true, legs:[
+    {type:"under", g:"clem_duke", which:"away", line:14.5, name:"Clemson team total under 14.5", odds:"", ctx:"Clemson must score 14 or fewer"},
+    {type:"under", g:"ore_msu", which:"home", line:13.5, name:"Michigan State team total under 13.5", odds:"", ctx:"MSU must score 13 or fewer"},
+    {type:"under", g:"unm_wyo", which:"total", line:37.5, name:"New Mexico @ Wyoming under 37.5", odds:"", ctx:"Combined score 37 or fewer"}]}
+];
+
+// live state per game
+const S = {};
+for (const id in GAMES) S[id] = {status:"pre", as:0, hs:0, period:0, clock:"", detail:"", away:GAMES[id].a.at(-1), home:GAMES[id].h.at(-1), plays:[], scorers:[], sit:"", eid:null};
+const STAT = {trae_ast:null, wagner_pts:null, sabonis_reb:null};
+const PLINE = {};
+let lastOk = null;
+
+const getJSON = async url => { const r = await fetch(url, {cache:"no-store"}); if (!r.ok) throw new Error(r.status + " " + url); return r.json(); };
+const teamHit = (t, keys) => keys.some(k => [t.location, t.name, t.displayName, t.shortDisplayName, t.abbreviation].includes(k));
+
+function readEvent(id, ev) {
+  const g = GAMES[id], st = S[id], comp = ev.competitions[0], s = ev.status || comp.status;
+  const A = comp.competitors.find(c => teamHit(c.team, g.a)), H = comp.competitors.find(c => teamHit(c.team, g.h));
+  st.eid = ev.id;
+  st.away = A.team.abbreviation; st.home = H.team.abbreviation;
+  st.as = +A.score || 0; st.hs = +H.score || 0;
+  st.period = s.period || 0; st.clock = s.displayClock || ""; st.detail = s.type.shortDetail || "";
+  st.status = s.type.state === "pre" ? "pre" : s.type.state === "post" ? "final" : /HALF/i.test(s.type.name || "") ? "half" : "live";
+  const sit = comp.situation;
+  st.sit = sit && st.status === "live" ? (sit.downDistanceText || "") : "";
+  if (sit && sit.lastPlay && sit.lastPlay.text) st.lastPlay = sit.lastPlay.text;
+}
+
+async function loadBoards() {
+  const found = {};
+  await Promise.all(Object.entries(LEAGUES).map(async ([lg, L]) => {
+    const j = await getJSON(`${API}${L.path}/scoreboard?dates=${DATE}${L.q}`);
+    for (const ev of j.events || []) {
+      const cs = ev.competitions[0].competitors.map(c => c.team);
+      for (const id in GAMES) if (GAMES[id].lg === lg && cs.some(t => teamHit(t, GAMES[id].a)) && cs.some(t => teamHit(t, GAMES[id].h))) { readEvent(id, ev); found[id] = 1; }
+    }
+  }));
+  return found;
+}
+
+function boxPlayers(sum) {
+  const out = [];
+  for (const tp of (sum.boxscore && sum.boxscore.players) || []) {
+    const sg = tp.statistics && tp.statistics[0]; if (!sg) continue;
+    const lab = sg.labels || sg.names || [];
+    for (const a of sg.athletes || []) {
+      const o = {name:a.athlete.displayName, short:a.athlete.shortName || a.athlete.displayName, team:tp.team.abbreviation};
+      lab.forEach((l, i) => o[l] = (a.stats || [])[i]);
+      out.push(o);
+    }
+  }
+  return out;
+}
+
+async function loadSummary(id) {
+  const g = GAMES[id], st = S[id], L = LEAGUES[g.lg];
+  if (!st.eid || st.status === "pre") return;
+  const sum = await getJSON(`${API}${L.path}/summary?event=${st.eid}`);
+  if (g.lg === "ncaafb") {
+    st.scorers = (sum.scoringPlays || []).slice(-3).reverse().map(p => `Q${p.period && p.period.number} ${p.clock ? p.clock.displayValue : ""} · ${p.team ? p.team.abbreviation : ""} — ${p.text}`);
+    const dp = sum.drives && sum.drives.current && sum.drives.current.plays;
+    st.plays = dp && dp.length ? dp.slice(-3).reverse().map(p => p.text) : (st.lastPlay ? [st.lastPlay] : []);
+    return;
+  }
+  const ps = boxPlayers(sum);
+  st.scorers = ps.filter(p => +p.PTS > 0).sort((x, y) => +y.PTS - +x.PTS).slice(0, 3).map(p => `${p.short} (${p.team}) ${p.PTS}`);
+  st.plays = (sum.plays || []).slice(-3).reverse().map(p => `${p.clock ? p.clock.displayValue : ""} — ${p.text}`);
+  for (const k in PROPS) if (PROPS[k].g === id) {
+    const p = ps.find(x => x.name === PROPS[k].who);
+    if (p) { STAT[k] = +p[PROPS[k].k] || 0; PLINE[k] = `${p.MIN || 0} min · ${p.PTS || 0} pts, ${p.REB || 0} reb, ${p.AST || 0} ast · ${p.PF || 0} fouls`; }
+    else if (st.status !== "pre") PLINE[k] = "Not in the box score yet (DNP or inactive?)";
+  }
+}
+
+let busy = false;
+async function refresh() {
+  if (busy) return; busy = true;
+  const btn = document.getElementById("refresh"), err = document.getElementById("err");
+  btn.disabled = true; btn.textContent = "Refreshing…";
+  try {
+    await loadBoards();
+    const res = await Promise.allSettled(Object.keys(GAMES).map(loadSummary));
+    lastOk = new Date();
+    const bad = res.filter(r => r.status === "rejected").length;
+    err.hidden = !bad; err.textContent = bad ? `${bad} box score(s) didn't load this round; scores are still current.` : "";
+  } catch (e) {
+    err.hidden = false;
+    err.textContent = "Couldn't reach ESPN (" + e.message + "). If this keeps happening, your browser may be blocking ESPN's feed.";
+  }
+  busy = false; btn.disabled = false; btn.textContent = "Refresh now";
+  render();
+}
+
+const fmtT = iso => new Date(iso).toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", timeZone:"America/New_York"});
+function frac(id) {
+  const st = S[id], L = LEAGUES[GAMES[id].lg];
+  if (st.status === "final") return 1;
+  if (st.status === "pre" || !st.period) return 0;
+  if (st.period > L.per) return 1;
+  if (st.status === "half") return 0.5;
+  const [m, s] = String(st.clock || "0:00").split(":").map(Number);
+  return Math.max(0.02, ((st.period - 1) * L.len + (L.len - ((m || 0) + (s || 0) / 60))) / (L.per * L.len));
+}
+function countdown(iso) {
+  const ms = Date.parse(iso) - Date.now();
+  if (ms <= 0) return "about to start";
+  const h = Math.floor(ms / 3.6e6), m = Math.round(ms % 3.6e6 / 6e4);
+  return `starts in ${h ? h + "h " : ""}${m}m`;
+}
+
+function evalLeg(L) {
+  const st = S[L.g], f = frac(L.g), live = st.status === "live" || st.status === "half";
+  const r = {state:"pre", pct:0, text:"Pending · " + countdown(GAMES[L.g].start), cls:"v-mute"};
+  if (L.type === "over") {
+    const cur = STAT[L.stat] || 0;
+    r.pct = Math.min(100, cur / L.line * 100);
+    if (cur >= L.line) return {...r, state:"win", text:`Hit — ${cur} of ${L.line}`, cls:"v-win"};
+    if (st.status === "final") return {...r, state:"loss", text:`Missed — finished with ${cur}`, cls:"v-loss"};
+    if (live) { const proj = cur / f; return {...r, state:"live", text:`${cur} of ${L.line} · needs ${L.line - cur} more · pace ${proj.toFixed(1)}`, cls: proj >= L.line ? "v-win" : "v-amb"}; }
+    return r;
+  }
+  if (st.status === "pre") return r;
+  if (L.type === "under") {
+    const cur = L.which === "total" ? st.as + st.hs : L.which === "away" ? st.as : st.hs;
+    r.pct = Math.min(100, cur / L.line * 100);
+    if (cur > L.line) return {...r, state:"loss", text:`Busted — ${cur} points`, cls:"v-loss"};
+    if (st.status === "final") return {...r, state:"win", text:`Hit — finished at ${cur}`, cls:"v-win"};
+    const proj = cur / Math.max(f, .05);
+    return {...r, state:"live", text:`${cur} so far · ${Math.floor(L.line - cur)} pts of cushion · pace ${proj.toFixed(0)}`, cls: proj <= L.line ? "v-win" : "v-amb"};
+  }
+  const mine = L.side === "away" ? st.as : st.hs, opp = L.side === "away" ? st.hs : st.as;
+  if (L.type === "spread") {
+    const m = mine - opp + L.pts; r.pct = Math.max(0, Math.min(100, 50 + m * 2));
+    if (st.status === "final") return {...r, state: m > 0 ? "win" : "loss", text: m > 0 ? `Covered by ${m}` : `Failed to cover by ${-m}`, cls: m > 0 ? "v-win" : "v-loss"};
+    return {...r, state:"live", text: m > 0 ? `Covering by ${m}` : `Not covering — short by ${-m}`, cls: m > 0 ? "v-win" : "v-amb"};
+  }
+  const d = mine - opp; r.pct = Math.max(0, Math.min(100, 50 + d * 3));
+  if (st.status === "final") return {...r, state: d > 0 ? "win" : "loss", text: d > 0 ? `Won by ${d}` : `Lost by ${-d}`, cls: d > 0 ? "v-win" : "v-loss"};
+  return {...r, state:"live", text: d > 0 ? `Leading by ${d}` : d < 0 ? `Trailing by ${-d}` : "Tied", cls: d > 0 ? "v-win" : "v-amb"};
+}
+
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function gameBlock(L) {
+  const st = S[L.g], lg = LEAGUES[GAMES[L.g].lg], live = st.status === "live" || st.status === "half", show = st.status !== "pre";
+  const clk = st.status === "pre" ? fmtT(GAMES[L.g].start) + " ET" : esc(st.detail || st.clock);
+  const scorerHead = GAMES[L.g].lg === "ncaafb" ? "Recent scores" : "Top scorers";
+  return `<div class="game">
+    <div class="sb">
+      <div class="tm"><em>${esc(st.away)}</em>${show ? `<span class="num">${st.as}</span>` : ""}</div>
+      <div class="clk ${live ? "live" : ""}">${clk}</div>
+      <div class="tm h">${show ? `<span class="num">${st.hs}</span>` : ""}<em>${esc(st.home)}</em></div>
+    </div>
+    ${st.sit ? `<div class="sit">${esc(st.sit)}</div>` : ""}
+    ${L.stat && PLINE[L.stat] ? `<div class="pl"><b>${esc(PROPS[L.stat].who)}:</b> ${esc(PLINE[L.stat])}</div>` : ""}
+    ${st.scorers.length ? `<div class="ctx">${scorerHead}:</div><ul class="feed">${st.scorers.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+    ${st.plays.length ? `<div class="ctx">Last plays:</div><ul class="feed">${st.plays.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+    ${st.eid ? `<div class="row"><a class="lnk" href="${lg.espn}${st.eid}" target="_blank" rel="noopener">ESPN gamecast ↗</a></div>` : ""}
+  </div>`;
+}
+
+function render() {
+  let risk = 0, alive = 0, pot = 0, liveN = 0;
+  document.getElementById("slips").innerHTML = SLIPS.map(Sl => {
+    const ev = Sl.legs.map(evalLeg);
+    const lost = ev.some(e => e.state === "loss"), won = ev.every(e => e.state === "win"), hits = ev.filter(e => e.state === "win").length;
+    risk += Sl.wager; if (!lost) { alive++; pot += Sl.pays; } if (ev.some(e => e.state === "live")) liveN++;
+    const pill = lost ? `<span class="pill p-loss">Lost</span>` : won ? `<span class="pill p-win">Won</span>` : `<span class="pill p-pre">${hits}/3 hit · Open</span>`;
+    return `<section class="slip">
+      <div class="sh"><h2>${Sl.title}</h2>${pill}</div>
+      <div class="money"><span class="odds"><s>${Sl.was}</s>${Sl.odds}</span><span>Wager<b>$${Sl.wager.toFixed(2)}</b></span><span>To pay<b>$${Sl.pays.toFixed(2)}</b></span></div>
+      <div class="note">${Sl.boost}${Sl.slipOnly ? " · from your bet slip — wager assumed $10" : ""}</div>
+      ${Sl.legs.map((L, i) => { const e = ev[i];
+        const dot = e.state === "win" ? `<span class="dot win">✓</span>` : e.state === "loss" ? `<span class="dot loss">✕</span>` : `<span class="dot"></span>`;
+        const bc = e.state === "win" ? "win" : e.state === "loss" ? "loss" : "";
+        return `<div class="leg"><div class="lt">${dot}<div class="ln"><strong>${L.name}</strong><small>${L.ctx}</small></div>${L.odds ? `<span class="lodds">${L.odds}</span>` : ""}</div>
+          ${e.state !== "pre" || L.type === "over" ? `<div class="bar"><i class="${bc}" style="width:${e.pct}%"></i></div>` : ""}
+          <div class="verdict ${e.cls}">${e.text}</div>${gameBlock(L)}</div>`; }).join("")}
+    </section>`;
+  }).join("");
+  document.getElementById("sum").innerHTML = `<div><b>$${risk.toFixed(2)}</b><span>At risk</span></div><div><b>$${pot.toFixed(2)}</b><span>Still live to pay</span></div><div><b>${alive}/3</b><span>Slips alive</span></div><div><b>${liveN}</b><span>Slips with live legs</span></div>`;
+  document.getElementById("asof").textContent = lastOk ? `ESPN data as of ${lastOk.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", second:"2-digit"})} · auto-refreshes every 30s` : "Loading ESPN…";
+}
+
+document.getElementById("refresh").addEventListener("click", refresh);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+render();
+refresh();
+const poll = setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+}
+
+</script>
+</body>
+</html>
